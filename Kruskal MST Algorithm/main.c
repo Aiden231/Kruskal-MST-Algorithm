@@ -15,7 +15,7 @@ void set_init(int n)
 
 int set_find(int curr)
 {
-	if (parent[curr] == -1) {
+	if (parent[curr] == -1) { // 오류 고쳐야됨
 		return curr;
 	}
 	while (parent[curr]!=-1)	{
