@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAx_VERTICEX 100
+#define TRUE 1
+#define FALSE 0
+
+#define MAX_VERTICES 10
 #define INF 1000
 
-int parent[MAx_VERTICEX];
+int parent[MAX_VERTICES];
 
 void set_init(int n) 
 {
@@ -18,10 +21,12 @@ int set_find(int curr)
 	if (parent[curr] == -1) { // 오류 고쳐야됨
 		return curr;
 	}
-	while (parent[curr]!=-1)	{
+
+	while (parent[curr] != -1)	{
 		curr = parent[curr];
-		return curr;
 	}
+
+	return curr;
 }
 
 void set_union(int a, int b)
@@ -39,19 +44,21 @@ typedef struct edge {
 
 typedef struct graphType {
 	int n;
-	Edge edges[2 * MAx_VERTICEX];
+	Edge edges[2 * MAX_VERTICES];
 }GraphType;
 
+// 그래프 초기화
 void graph_init(GraphType* g)
 {
 	g->n = 0;
-	for (int i = 0; i < 2 * MAx_VERTICEX; i++) {
+	for (int i = 0; i < 2 * MAX_VERTICES; i++) {
 		g->edges[i].start = 0;
 		g->edges[i].end = 0;
 		g->edges[i].weight = INF;
 	}
 }
 
+// 간선 추가 함수
 void insert_edge(GraphType* g, int start, int end, int w)
 {
 	g->edges[g->n].start = start;
@@ -60,35 +67,81 @@ void insert_edge(GraphType* g, int start, int end, int w)
 	g->n++;
 }
 
-int compare(const void* a, const void* b)
-{
-	Edge* x = (Edge*)a;
-	Edge* y = (Edge*)b;
-	return(x->weight - y->weight);
+// 최소 힙을 구현하는 함수
+void min_heapify(Edge* heap, int size, int i) {
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
+    int smallest = i;
+
+    if (left < size && heap[left].weight < heap[smallest].weight) {
+        smallest = left;
+    }
+
+    if (right < size && heap[right].weight < heap[smallest].weight) {
+        smallest = right;
+    }
+
+    if (smallest != i) {
+        Edge temp = heap[i];
+        heap[i] = heap[smallest];
+        heap[smallest] = temp;
+
+        min_heapify(heap, size, smallest);
+    }
 }
 
-void kruskal(GraphType* g)
-{
-	int edge_accepted = 0;
-	int uset, vset;
-	Edge e;
+// 최소 힙에서 최소값을 추출하는 함수
+Edge extract_min(Edge* heap, int* size) {
+    Edge min = heap[0];
+    heap[0] = heap[(*size) - 1];
+    (*size)--;
+    min_heapify(heap, *size, 0);
+    return min;
+}
 
-	set_init(g->n);
-	qsort(g->edges, g->n, sizeof(Edge), compare);
+// 최소 힙에 새로운 원소를 삽입하는 함수
+void insert_min_heap(Edge* heap, int* size, Edge new_edge) {
+    (*size)++;
+    int i = (*size) - 1;
+    heap[i] = new_edge;
 
-	printf("크루스칼 최소 신장 트리 알고리즘\n");
-	int i = 0;
-	while (edge_accepted < (g->n) - 1) {
-		e = g->edges[i];
-		uset = set_find(e.start);
-		vset = set_find(e.end);
-		if (uset != vset) {
-			printf("간선 (%d,%d) %d 선택\n", e.start, e.end, e.weight);
-			edge_accepted++;
-			set_union(uset, vset);
-		}
-		i++;
-	}
+    while (i != 0 && heap[(i - 1) / 2].weight > heap[i].weight) {
+        Edge temp = heap[i];
+        heap[i] = heap[(i - 1) / 2];
+        heap[(i - 1) / 2] = temp;
+
+        i = (i - 1) / 2;
+    }
+}
+
+void kruskal(GraphType* g) {
+    int edge_accepted = 0;
+    Edge e;
+    Edge* min_heap = (Edge*)malloc(g->n * sizeof(Edge));
+    int heap_size = 0;
+
+    set_init(g->n);
+
+    for (int i = 0; i < g->n; i++) {
+        insert_min_heap(min_heap, &heap_size, g->edges[i]);
+    }
+
+    printf("크루스칼 최소 신장 트리 알고리즘\n");
+	printf("MinHeap 사용\n\n");
+
+    while (edge_accepted < (g->n / 2) - 1) {
+        e = extract_min(min_heap, &heap_size);
+        int uset = set_find(e.start);
+        int vset = set_find(e.end);
+
+        if (uset != vset) {
+            printf("간선 (%d,%d) %d 선택\n", e.start + 1, e.end + 1, e.weight);
+            edge_accepted++;
+            set_union(uset, vset);
+        }
+    }
+
+    free(min_heap);
 }
 
 int main()
@@ -97,28 +150,29 @@ int main()
 	g = (GraphType*)malloc(sizeof(GraphType));
 	graph_init(g);
 
-	insert_edge(g,1,2,3);
-	insert_edge(g, 1, 6, 11);
-	insert_edge(g, 1, 7, 12);
-	insert_edge(g, 2, 3, 5);
-	insert_edge(g, 2, 4, 4);
-	insert_edge(g, 2, 5, 1);
-	insert_edge(g, 2, 6, 7);
-	insert_edge(g, 2, 7, 8);
-	insert_edge(g, 3, 4, 2);
-	insert_edge(g, 3, 7, 6);
-	insert_edge(g, 3, 8, 3);
-	insert_edge(g, 4, 5, 13);
-	insert_edge(g, 4, 8, 14);
-	insert_edge(g, 4, 10, 16);
-	insert_edge(g, 5, 6, 9);
-	insert_edge(g, 5, 9, 18);
-	insert_edge(g, 5, 10, 17);
-	insert_edge(g, 7, 8, 13);
-	insert_edge(g, 8, 10, 15);
-	insert_edge(g, 9, 10, 10);
+	insert_edge(g,0,1,3);
+	insert_edge(g, 0, 5, 11);
+	insert_edge(g, 0, 6, 12);
+	insert_edge(g, 1, 4, 5);
+	insert_edge(g, 1, 3, 4);
+	insert_edge(g, 1, 4, 1);
+	insert_edge(g, 1, 5, 7);
+	insert_edge(g, 1, 6, 8);
+	insert_edge(g, 2, 3, 2);
+	insert_edge(g, 2, 6, 6);
+	insert_edge(g, 2, 7, 5);
+	insert_edge(g, 3, 4, 13);
+	insert_edge(g, 3, 7, 14);
+	insert_edge(g, 3, 9, 16);
+	insert_edge(g, 4, 5, 9);
+	insert_edge(g, 4, 8, 18);
+	insert_edge(g, 4, 9, 17);
+	insert_edge(g, 6, 7, 13);
+	insert_edge(g, 7, 9, 15);
+	insert_edge(g, 8, 9, 10);
 
 	kruskal(g);
+	
 	free(g);
 	return 0;
 }
